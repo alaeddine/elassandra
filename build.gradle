@@ -291,6 +291,7 @@ allprojects {
     "com.strapdata.elasticsearch.distribution.deb:elasticsearch-oss:${version}": ':distribution:packages:oss-deb',
            */
     "com.strapdata.elasticsearch.test:logger-usage:${version}": ':test:logger-usage',
+    "com.strapdata.elasticsearch.xpack.test:feature-aware:${version}": ':x-pack:test:feature-aware',
     // for transport client
     "com.strapdata.elasticsearch.plugin:transport-netty4-client:${version}": ':modules:transport-netty4',
     "com.strapdata.elasticsearch.plugin:reindex-client:${version}": ':modules:reindex',
@@ -299,6 +300,9 @@ allprojects {
     "com.strapdata.elasticsearch.plugin:aggs-matrix-stats-client:${version}": ':modules:aggs-matrix-stats',
     "com.strapdata.elasticsearch.plugin:percolator-client:${version}": ':modules:percolator',
     "com.strapdata.elasticsearch.plugin:rank-eval-client:${version}": ':modules:rank-eval',
+    // for security example plugins
+    "com.strapdata.elasticsearch.plugin:x-pack-core:${version}": ':x-pack:plugin:core',
+    "com.strapdata.elasticsearch.client.x-pack-transport:${version}": ':x-pack:transport-client'
   ]
   // substitute unreleased versions with projects that check out and build locally
   /*

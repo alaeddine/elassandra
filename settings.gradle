@@ -1,4 +1,4 @@
-import org.elasticsearch.gradle.Version
+//import org.elasticsearch.gradle.Version
 
 String dirName = rootProject.projectDir.name
 rootProject.name = dirName
@@ -69,6 +69,7 @@ project(':example-plugins').projectDir = new File(rootProject.projectDir, 'plugi
 addSubProjects('', new File(rootProject.projectDir, 'libs'))
 addSubProjects('', new File(rootProject.projectDir, 'modules'))
 addSubProjects('', new File(rootProject.projectDir, 'plugins'))
+addSubProjects('', new File(rootProject.projectDir, 'x-pack'))
 
 List startTasks = gradle.startParameter.taskNames
 

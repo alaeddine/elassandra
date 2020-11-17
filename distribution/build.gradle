@@ -162,6 +162,16 @@ project.rootProject.subprojects.findAll { it.parent.path == ':modules' }.each { 
   restTestExpansions['expected.modules.count'] += 1
 }
 
+// use licenses from each of the bundled xpack plugins
+Project xpack = project(':x-pack:plugin')
+xpack.subprojects.findAll { it.parent == xpack }.each { Project xpackModule ->
+  File licenses = new File(xpackModule.projectDir, 'licenses')
+  if (licenses.exists()) {
+    buildDefaultNotice.licensesDir licenses
+  }
+  copyModule(processDefaultOutputs, xpackModule)
+}
+
 // make sure we have a clean task since we aren't a java project, but we have tasks that
 // put stuff in the build dir
 task clean(type: Delete) {
@@ -234,6 +244,12 @@ configure(subprojects.findAll { ['archives', 'packages'].contains(it.name) }) {
         into('tools/plugin-cli') {
           from { project(':distribution:tools:plugin-cli').jar }
           from { project(':distribution:tools:plugin-cli').configurations.runtime }
+        }
+        if (oss == false) {
+          into('tools/security-cli') {
+            from { project(':x-pack:plugin:security:cli').jar }
+            from { project(':x-pack:plugin:security:cli').configurations.compile }
+          }
         }
 
         // Important files used to ship some cqlsh.py python dependencies if not already installed on host.
