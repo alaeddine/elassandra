@@ -1,5 +1,5 @@
 dependencies {
-  testCompile "org.elasticsearch.plugin:x-pack-core:${version}"
+  testCompile "com.strapdata.elasticsearch.plugin:x-pack-core:${version}"
 }
 
 Project mainProject = project
@@ -29,7 +29,7 @@ subprojects {
   licenseHeaders.enabled = false
 
   dependencies {
-    testCompile "org.elasticsearch.plugin:x-pack-core:${version}"
+    testCompile "com.strapdata.elasticsearch.plugin:x-pack-core:${version}"
   }
 
   integTestCluster {

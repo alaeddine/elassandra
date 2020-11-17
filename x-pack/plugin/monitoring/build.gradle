@@ -17,11 +17,11 @@ dependencies {
     testCompile project(path: xpackModule('core'), configuration: 'testArtifacts')
 
     // monitoring deps
-    compile "org.elasticsearch.client:elasticsearch-rest-client:${version}"
-    compile "org.elasticsearch.client:elasticsearch-rest-client-sniffer:${version}"
+    compile "com.strapdata.elasticsearch.client:elasticsearch-rest-client:${version}"
+    compile "com.strapdata.elasticsearch.client:elasticsearch-rest-client-sniffer:${version}"
 
     // baz - this goes away after we separate out the actions #27759
-    testCompile "org.elasticsearch.plugin:x-pack-watcher:${version}"
+    testCompile "com.strapdata.elasticsearch.plugin:x-pack-watcher:${version}"
 }
 
 compileJava.options.compilerArgs << "-Xlint:-deprecation,-rawtypes,-serial,-try,-unchecked"

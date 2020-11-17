@@ -6,7 +6,7 @@ archivesBaseName = 'qa-sql'
 group = "org.elasticsearch.x-pack.qa.sql"
 
 dependencies {
-  compile "org.elasticsearch.test:framework:${version}"
+  compile "com.strapdata.elasticsearch.test:framework:${version}"
 
   // JDBC testing dependencies
   compile project(path: xpackModule('sql:jdbc'), configuration: 'nodeps')
@@ -51,7 +51,7 @@ subprojects {
     testCompile(xpackProject('plugin:sql:qa')) {
       transitive = false
     }
-    testCompile "org.elasticsearch.test:framework:${version}"
+    testCompile "com.strapdata.elasticsearch.test:framework:${version}"
 
     // JDBC testing dependencies
     testRuntime "net.sourceforge.csvjdbc:csvjdbc:1.0.34"

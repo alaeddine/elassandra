@@ -30,7 +30,7 @@ configurations {
     nativeBundle {
         resolutionStrategy.dependencySubstitution {
             if (findProject(':ml-cpp') != null) {
-                substitute module("org.elasticsearch.ml:ml-cpp") with project(":ml-cpp")
+                substitute module("com.strapdata.elasticsearch.ml:ml-cpp") with project(":ml-cpp")
             }
         }
         resolutionStrategy.cacheChangingModulesFor 2, 'hours'
@@ -54,7 +54,7 @@ compileTestJava.options.compilerArgs << "-Xlint:-deprecation,-rawtypes,-serial,-
 dependencies {
     // "org.elasticsearch.plugin:x-pack-core:${version}" doesn't work with idea because the testArtifacts are also here
     compileOnly project(path: xpackModule('core'), configuration: 'default')
-    compileOnly "org.elasticsearch.plugin:elasticsearch-scripting-painless-spi:${versions.elasticsearch}"
+    compileOnly "com.strapdata.elasticsearch.plugin:elasticsearch-scripting-painless-spi:${versions.elasticsearch}"
     testCompile project(path: xpackModule('core'), configuration: 'testArtifacts')
     // This should not be here
     testCompile project(path: xpackModule('security'), configuration: 'testArtifacts')
@@ -63,7 +63,7 @@ dependencies {
     compile project(':libs:grok')
     compile "com.ibm.icu:icu4j:${versions.icu4j}"
     compile "net.sf.supercsv:super-csv:${versions.supercsv}"
-    nativeBundle("org.elasticsearch.ml:ml-cpp:${project.version}@zip") {
+    nativeBundle("org.elasticsearch.ml:ml-cpp:6.8.4@zip") {
       changing = true
     }
     testCompile 'org.ini4j:ini4j:0.5.2'

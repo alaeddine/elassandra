@@ -25,10 +25,10 @@ dependencies {
     
     compile xpackProject('plugin:sql:sql-client')
     compile xpackProject('plugin:sql:sql-action')    
-    compile "org.elasticsearch:elasticsearch-cli:${version}"
+    compile "com.strapdata.elasticsearch:elasticsearch-cli:${version}"
 
     runtime "org.elasticsearch:jna:${versions.jna}"
-    testCompile "org.elasticsearch.test:framework:${version}"
+    testCompile "com.strapdata.elasticsearch.test:framework:${version}"
 }
 
 dependencyLicenses {

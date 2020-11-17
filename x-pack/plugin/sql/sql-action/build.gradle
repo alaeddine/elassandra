@@ -26,7 +26,7 @@ dependencies {
     runtime "org.apache.logging.log4j:log4j-api:${versions.log4j}"
     runtime "org.apache.logging.log4j:log4j-core:${versions.log4j}"
 
-    testCompile "org.elasticsearch.test:framework:${version}"
+    testCompile "com.strapdata.elasticsearch.test:framework:${version}"
 }
 
 forbiddenApisMain {

@@ -43,9 +43,9 @@ dependencies {
         exclude group: "org.ow2.asm"
     }
     compile project('sql-action')
-    compile "org.elasticsearch.plugin:aggs-matrix-stats-client:${version}"
+    compile "com.strapdata.elasticsearch.plugin:aggs-matrix-stats-client:${version}"
     compile "org.antlr:antlr4-runtime:4.5.3"
-    testCompile "org.elasticsearch.test:framework:${version}"
+    testCompile "com.strapdata.elasticsearch.test:framework:${version}"
     testCompile project(path: xpackModule('core'), configuration: 'testArtifacts')
     testCompile project(path: xpackModule('security'), configuration: 'testArtifacts')
     testCompile project(path: ':modules:reindex', configuration: 'runtime')
