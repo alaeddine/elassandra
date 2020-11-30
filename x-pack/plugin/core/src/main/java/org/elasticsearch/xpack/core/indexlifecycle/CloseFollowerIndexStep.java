@@ -13,7 +13,7 @@ import org.elasticsearch.cluster.metadata.IndexMetaData;
 
 import java.util.Map;
 
-import static org.elasticsearch.xpack.core.indexlifecycle.UnfollowAction.CCR_METADATA_KEY;
+//import static org.elasticsearch.xpack.core.indexlifecycle.UnfollowAction.CCR_METADATA_KEY;
 
 final class CloseFollowerIndexStep extends AsyncRetryDuringSnapshotActionStep {
 
@@ -26,7 +26,7 @@ final class CloseFollowerIndexStep extends AsyncRetryDuringSnapshotActionStep {
     @Override
     void performDuringNoSnapshot(IndexMetaData indexMetaData, ClusterState currentClusterState, Listener listener) {
         String followerIndex = indexMetaData.getIndex().getName();
-        Map<String, String> customIndexMetadata = indexMetaData.getCustomData(CCR_METADATA_KEY);
+        Map<String, String> customIndexMetadata = null;//indexMetaData.getCustomData(CCR_METADATA_KEY);
         if (customIndexMetadata == null) {
             listener.onResponse(true);
             return;

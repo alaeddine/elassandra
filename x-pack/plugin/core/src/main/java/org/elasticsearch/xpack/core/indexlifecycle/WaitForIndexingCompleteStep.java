@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.elasticsearch.xpack.core.indexlifecycle.UnfollowAction.CCR_METADATA_KEY;
+//import static org.elasticsearch.xpack.core.indexlifecycle.UnfollowAction.CCR_METADATA_KEY;
 
 final class WaitForIndexingCompleteStep extends ClusterStateWaitStep {
     private static final Logger logger = LogManager.getLogger(WaitForIndexingCompleteStep.class);
@@ -37,7 +37,7 @@ final class WaitForIndexingCompleteStep extends ClusterStateWaitStep {
             logger.debug("[{}] lifecycle action for index [{}] executed but index no longer exists", getKey().getAction(), index.getName());
             return new Result(false, null);
         }
-        Map<String, String> customIndexMetadata = followerIndex.getCustomData(CCR_METADATA_KEY);
+        Map<String, String> customIndexMetadata = null; //followerIndex.getCustomData(CCR_METADATA_KEY);
         if (customIndexMetadata == null) {
             return new Result(true, null);
         }

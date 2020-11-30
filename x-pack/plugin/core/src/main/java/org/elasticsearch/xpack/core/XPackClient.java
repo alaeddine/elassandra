@@ -17,7 +17,7 @@ import org.elasticsearch.xpack.core.action.TransportFreezeIndexAction.FreezeRequ
 import org.elasticsearch.xpack.core.action.TransportFreezeIndexAction.FreezeResponse;
 import org.elasticsearch.xpack.core.action.XPackInfoAction;
 import org.elasticsearch.xpack.core.action.XPackInfoRequestBuilder;
-import org.elasticsearch.xpack.core.ccr.client.CcrClient;
+//import org.elasticsearch.xpack.core.ccr.client.CcrClient;
 import org.elasticsearch.xpack.core.indexlifecycle.client.ILMClient;
 import org.elasticsearch.xpack.core.ml.client.MachineLearningClient;
 import org.elasticsearch.xpack.core.monitoring.client.MonitoringClient;
@@ -36,7 +36,7 @@ public class XPackClient {
 
     private final Client client;
 
-    private final CcrClient ccrClient;
+//    private final CcrClient ccrClient;
     private final LicensingClient licensingClient;
     private final MonitoringClient monitoringClient;
     private final SecurityClient securityClient;
@@ -46,7 +46,7 @@ public class XPackClient {
 
     public XPackClient(Client client) {
         this.client = Objects.requireNonNull(client, "client");
-        this.ccrClient = new CcrClient(client);
+//        this.ccrClient = new CcrClient(client);
         this.licensingClient = new LicensingClient(client);
         this.monitoringClient = new MonitoringClient(client);
         this.securityClient = new SecurityClient(client);
@@ -59,9 +59,9 @@ public class XPackClient {
         return client;
     }
 
-    public CcrClient ccr() {
-        return ccrClient;
-    }
+//    public CcrClient ccr() {
+//        return ccrClient;
+//    }
 
     public LicensingClient licensing() {
         return licensingClient;

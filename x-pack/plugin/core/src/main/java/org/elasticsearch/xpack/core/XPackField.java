@@ -34,7 +34,7 @@ public final class XPackField {
     /** Name constant for the index lifecycle feature. */
     public static final String INDEX_LIFECYCLE = "ilm";
     /** Name constant for the CCR feature. */
-    public static final String CCR = "ccr";
+//    public static final String CCR = "ccr";
 
     private XPackField() {}
 

@@ -12,7 +12,7 @@ import org.elasticsearch.cluster.metadata.IndexMetaData;
 
 import java.util.Map;
 
-import static org.elasticsearch.xpack.core.indexlifecycle.UnfollowAction.CCR_METADATA_KEY;
+//import static org.elasticsearch.xpack.core.indexlifecycle.UnfollowAction.CCR_METADATA_KEY;
 
 abstract class AbstractUnfollowIndexStep extends AsyncActionStep {
 
@@ -24,7 +24,7 @@ abstract class AbstractUnfollowIndexStep extends AsyncActionStep {
     public final void performAction(IndexMetaData indexMetaData, ClusterState currentClusterState,
                                     ClusterStateObserver observer, Listener listener) {
         String followerIndex = indexMetaData.getIndex().getName();
-        Map<String, String> customIndexMetadata = indexMetaData.getCustomData(CCR_METADATA_KEY);
+        Map<String, String> customIndexMetadata = null ;//indexMetaData.getCustomData(CCR_METADATA_KEY);
         if (customIndexMetadata == null) {
             listener.onResponse(true);
             return;

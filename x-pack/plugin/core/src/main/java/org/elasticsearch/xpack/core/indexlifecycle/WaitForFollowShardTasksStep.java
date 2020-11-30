@@ -12,8 +12,8 @@ import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.ToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.xpack.core.ccr.ShardFollowNodeTaskStatus;
-import org.elasticsearch.xpack.core.ccr.action.FollowStatsAction;
+//import org.elasticsearch.xpack.core.ccr.ShardFollowNodeTaskStatus;
+//import org.elasticsearch.xpack.core.ccr.action.FollowStatsAction;
 
 import java.io.IOException;
 import java.util.List;
@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static org.elasticsearch.xpack.core.indexlifecycle.UnfollowAction.CCR_METADATA_KEY;
+//import static org.elasticsearch.xpack.core.indexlifecycle.UnfollowAction.CCR_METADATA_KEY;
 
 final class WaitForFollowShardTasksStep extends AsyncWaitStep {
 
@@ -33,38 +33,38 @@ final class WaitForFollowShardTasksStep extends AsyncWaitStep {
 
     @Override
     public void evaluateCondition(IndexMetaData indexMetaData, Listener listener) {
-        Map<String, String> customIndexMetadata = indexMetaData.getCustomData(CCR_METADATA_KEY);
+        Map<String, String> customIndexMetadata = null ;//indexMetaData.getCustomData(CCR_METADATA_KEY);
         if (customIndexMetadata == null) {
             listener.onResponse(true, null);
             return;
         }
 
-        FollowStatsAction.StatsRequest request = new FollowStatsAction.StatsRequest();
-        request.setIndices(new String[]{indexMetaData.getIndex().getName()});
-        getClient().execute(FollowStatsAction.INSTANCE, request,
-            ActionListener.wrap(r -> handleResponse(r, listener), listener::onFailure));
+//        FollowStatsAction.StatsRequest request = new FollowStatsAction.StatsRequest();
+//        request.setIndices(new String[]{indexMetaData.getIndex().getName()});
+//        getClient().execute(FollowStatsAction.INSTANCE, request,
+//            ActionListener.wrap(r -> handleResponse(r, listener), listener::onFailure));
     }
 
-    void handleResponse(FollowStatsAction.StatsResponses responses, Listener listener) {
-        List<ShardFollowNodeTaskStatus> unSyncedShardFollowStatuses = responses.getStatsResponses()
-            .stream()
-            .map(FollowStatsAction.StatsResponse::status)
-            .filter(shardFollowStatus -> shardFollowStatus.leaderGlobalCheckpoint() != shardFollowStatus.followerGlobalCheckpoint())
-            .collect(Collectors.toList());
-
-        // Follow stats api needs to return stats for follower index and all shard follow tasks should be synced:
-        boolean conditionMet = responses.getStatsResponses().size() > 0 && unSyncedShardFollowStatuses.isEmpty();
-        if (conditionMet) {
-            listener.onResponse(true, null);
-        } else {
-            List<Info.ShardFollowTaskInfo> shardFollowTaskInfos = unSyncedShardFollowStatuses
-                .stream()
-                .map(status -> new Info.ShardFollowTaskInfo(status.followerIndex(), status.getShardId(),
-                    status.leaderGlobalCheckpoint(), status.followerGlobalCheckpoint()))
-                .collect(Collectors.toList());
-            listener.onResponse(false, new Info(shardFollowTaskInfos));
-        }
-    }
+//    void handleResponse(FollowStatsAction.StatsResponses responses, Listener listener) {
+//        List<ShardFollowNodeTaskStatus> unSyncedShardFollowStatuses = responses.getStatsResponses()
+//            .stream()
+//            .map(FollowStatsAction.StatsResponse::status)
+//            .filter(shardFollowStatus -> shardFollowStatus.leaderGlobalCheckpoint() != shardFollowStatus.followerGlobalCheckpoint())
+//            .collect(Collectors.toList());
+//
+//        // Follow stats api needs to return stats for follower index and all shard follow tasks should be synced:
+//        boolean conditionMet = responses.getStatsResponses().size() > 0 && unSyncedShardFollowStatuses.isEmpty();
+//        if (conditionMet) {
+//            listener.onResponse(true, null);
+//        } else {
+//            List<Info.ShardFollowTaskInfo> shardFollowTaskInfos = unSyncedShardFollowStatuses
+//                .stream()
+//                .map(status -> new Info.ShardFollowTaskInfo(status.followerIndex(), status.getShardId(),
+//                    status.leaderGlobalCheckpoint(), status.followerGlobalCheckpoint()))
+//                .collect(Collectors.toList());
+//            listener.onResponse(false, new Info(shardFollowTaskInfos));
+//        }
+//    }
 
     static final class Info implements ToXContentObject {
 
