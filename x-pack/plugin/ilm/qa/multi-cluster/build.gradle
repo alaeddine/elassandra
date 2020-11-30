@@ -3,7 +3,6 @@ import org.elasticsearch.gradle.test.RestIntegTestTask
 apply plugin: 'elasticsearch.standalone-test'
 
 dependencies {
-    testCompile project(':x-pack:plugin:ccr:qa')
     testCompile project(':x-pack:plugin:core')
     testCompile project(':x-pack:plugin:ilm')
 }
@@ -16,7 +15,6 @@ leaderClusterTestCluster {
     numNodes = 1
     clusterName = 'leader-cluster'
     setting 'xpack.ilm.enabled', 'true'
-    setting 'xpack.ccr.enabled', 'true'
     setting 'xpack.security.enabled', 'false'
     setting 'xpack.watcher.enabled', 'false'
     setting 'xpack.monitoring.enabled', 'false'
@@ -38,7 +36,6 @@ followClusterTestCluster {
     numNodes = 1
     clusterName = 'follow-cluster'
     setting 'xpack.ilm.enabled', 'true'
-    setting 'xpack.ccr.enabled', 'true'
     setting 'xpack.security.enabled', 'false'
     setting 'xpack.watcher.enabled', 'false'
     setting 'xpack.monitoring.enabled', 'false'

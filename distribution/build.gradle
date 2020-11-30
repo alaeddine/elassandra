@@ -127,7 +127,7 @@ void copyModule(Sync copyTask, Project module) {
       includeEmptyDirs false
 
       eachFile { details ->
-        String name = module.plugins.hasPlugin('elasticsearch.esplugin') ? module.esplugin.name : module.es_meta_plugin.name 
+        String name = module.plugins.hasPlugin('elasticsearch.esplugin') ? module.esplugin.name : module.es_meta_plugin.name
         // Copy all non config/bin files
         // Note these might be unde a subdirectory in the case of a meta plugin
         if ((details.relativePath.pathString ==~ /([^\/]+\/)?(conf|bin)\/.*/) == false) {
@@ -138,6 +138,44 @@ void copyModule(Sync copyTask, Project module) {
           details.relativePath = new RelativePath(true, segments.takeRight(segments.length - 1))
         }
       }
+    }
+  }
+}
+
+// log4j config could be contained in modules, so we must join it together using these tasks
+task buildOssLog4jConfig {
+  dependsOn processOssOutputs
+  ext.contents = []
+  ext.log4jFile = file("${ossOutputs}/log4j2.properties")
+  outputs.file log4jFile
+}
+task buildDefaultLog4jConfig {
+  dependsOn processDefaultOutputs
+  ext.contents = []
+  ext.log4jFile = file("${defaultOutputs}/log4j2.properties")
+  outputs.file log4jFile
+}
+
+Closure writeLog4jProperties = {
+  String mainLog4jProperties = file('src/conf/log4j2.properties').getText('UTF-8')
+  it.log4jFile.setText(mainLog4jProperties, 'UTF-8')
+  for (String moduleLog4jProperties : it.contents.reverse()) {
+    it.log4jFile.append(moduleLog4jProperties, 'UTF-8')
+  }
+}
+buildOssLog4jConfig.doLast(writeLog4jProperties)
+buildDefaultLog4jConfig.doLast(writeLog4jProperties)
+
+// copy log4j2.properties from modules that have it
+void copyLog4jProperties(Task buildTask, Project module) {
+  buildTask.doFirst {
+    FileTree tree = zipTree(module.bundlePlugin.outputs.files.singleFile)
+    FileTree filtered = tree.matching {
+      include 'conf/log4j2.properties'
+      include '*/conf/log4j2.properties' // could be in a bundled plugin
+    }
+    if (filtered.isEmpty() == false) {
+      buildTask.contents.add('\n\n' + filtered.singleFile.getText('UTF-8'))
     }
   }
 }
@@ -159,6 +197,13 @@ project.rootProject.subprojects.findAll { it.parent.path == ':modules' }.each { 
     copyModule(processTransportOutputs, module)
   }
 
+  copyLog4jProperties(buildOssLog4jConfig, module)
+  copyLog4jProperties(buildDefaultLog4jConfig, module)
+
+  // make sure the module's integration tests run after the integ-test-zip (ie rest tests)
+  module.afterEvaluate({
+    module.integTest.mustRunAfter(':distribution:archives:integ-test-zip:integTest')
+  })
   restTestExpansions['expected.modules.count'] += 1
 }
 
@@ -170,6 +215,7 @@ xpack.subprojects.findAll { it.parent == xpack }.each { Project xpackModule ->
     buildDefaultNotice.licensesDir licenses
   }
   copyModule(processDefaultOutputs, xpackModule)
+  copyLog4jProperties(buildDefaultLog4jConfig, xpackModule)
 }
 
 // make sure we have a clean task since we aren't a java project, but we have tasks that
@@ -293,6 +339,13 @@ configure(subprojects.findAll { ['archives', 'packages'].contains(it.name) }) {
           from '../src/conf'
           MavenFilteringHack.filter(it, expansionsForDistribution(distributionType, oss))
         }
+        if (oss) {
+          from project(':distribution').buildOssLog4jConfig
+          from project(':distribution').buildOssConfig
+        } else {
+          from project(':distribution').buildDefaultLog4jConfig
+          from project(':distribution').buildDefaultConfig
+        }
       }
     }
 
@@ -309,7 +362,11 @@ configure(subprojects.findAll { ['archives', 'packages'].contains(it.name) }) {
         }
         with copySpec {
           eachFile { it.setMode(0755) }
-          from project(':distribution').buildOssBin
+          if (oss) {
+            from project(':distribution').buildOssBin
+          } else {
+            from project(':distribution').buildDefaultBin
+          }
         }
       }
     }
@@ -393,6 +450,28 @@ configure(subprojects.findAll { ['archives', 'packages'].contains(it.name) }) {
 
 }
 
+task run(type: RunTask) {
+  distribution = System.getProperty('run.distribution', 'zip')
+  if (distribution == 'zip') {
+    String licenseType = System.getProperty("run.license_type", "basic")
+    if (licenseType == 'trial') {
+      setting 'xpack.ml.enabled', 'true'
+      setting 'xpack.graph.enabled', 'true'
+      setting 'xpack.watcher.enabled', 'true'
+      setting 'xpack.license.self_generated.type', 'trial'
+      setupCommand 'setupTestAdmin',
+              'bin/elasticsearch-users', 'useradd', 'elastic-admin', '-p', 'elastic-password', '-r', 'superuser'
+    } else if (licenseType != 'basic') {
+      throw new IllegalArgumentException("Unsupported self-generated license type: [" + licenseType + "[basic] or [trial].")
+    }
+    setting 'xpack.security.enabled', 'true'
+    setting 'xpack.monitoring.enabled', 'true'
+    setting 'xpack.sql.enabled', 'true'
+    setting 'xpack.rollup.enabled', 'true'
+    keystoreSetting 'bootstrap.password', 'password'
+  }
+}
+
 /**
  * Build some variables that are replaced in the packages. This includes both
  * scripts like bin/elasticsearch and bin/elasticsearch-plugin that a user might run and also
@@ -432,10 +511,13 @@ subprojects {
     final String packagingLoggc = "${pathLogs}/gc.log"
 
     String licenseText
-    licenseText = rootProject.file('licenses/APACHE-LICENSE-2.0.txt').getText('UTF-8')
-
+    if (oss) {
+      licenseText = rootProject.file('licenses/APACHE-LICENSE-2.0.txt').getText('UTF-8')
+    } else {
+      licenseText = rootProject.file('licenses/ELASTIC-LICENSE.txt').getText('UTF-8')
+    }
     // license text needs to be indented with a single space
-    licenseText = ' ' + licenseText.replace('\n', '\n ') 
+    licenseText = ' ' + licenseText.replace('\n', '\n ')
 
     String footer = "# Built for ${project.name}-${project.version} " +
         "(${distributionType})"
@@ -509,9 +591,9 @@ subprojects {
         'def': footer
       ],
 
-      'es.distribution.flavor': [
-        'def': 'oss'
-      ],
+            'es.distribution.flavor': [
+                    'def': oss ? 'oss' : 'default'
+            ],
 
 
       'es.distribution.type': [
@@ -521,9 +603,9 @@ subprojects {
         'zip': 'zip'
       ],
 
-      'license.name': [
-        'deb': 'ASL-2.0'
-      ],
+            'license.name': [
+                    'deb': oss ? 'ASL-2.0' : 'Elastic-License'
+            ],
 
       'license.text': [
         'deb': licenseText,

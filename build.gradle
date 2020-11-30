@@ -27,25 +27,14 @@ import org.elasticsearch.gradle.plugin.PluginBuildPlugin
 import org.gradle.util.GradleVersion
 import org.gradle.util.DistributionLocator
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
-import com.github.jk1.license.render.*;
-import com.github.jk1.license.filter.*;
 
 plugins {
-    id 'com.gradle.build-scan' version '2.3'
-    id 'com.github.jk1.dependency-license-report' version '1.3'
-    id 'base'
+  id 'com.gradle.build-scan' version '2.3'
+  id 'base'
 }
 
 apply plugin: 'nebula.info-scm'
 apply from: 'gradle/build-scan.gradle'
-apply plugin: 'com.github.jk1.dependency-license-report'
-
-licenseReport {
-  renderers = [new CsvReportRenderer(separator:';'), new TextReportRenderer(), new InventoryHtmlReportRenderer('index.html', 'Elassandra License Report')]
-  filters = [new LicenseBundleNormalizer(bundlePath: rootProject.file('buildSrc/src/main/resources/license-normalizer-bundle.json'))]
-  projects = [project] + project.subprojects
-  excludes = [ 'com.strapdata.elasticsearch:elasticsearch-core' ]
-}
 
 // common maven publishing configuration
 allprojects {
@@ -53,10 +42,6 @@ allprojects {
   version = VersionProperties.elasticsearch
   description = "Elasticsearch subproject ${project.path}"
 }
-
-ext.repoUsername = { project.hasProperty("repoUsername") ? getProperty("repoUsername") : "" }
-ext.repoPassword = { project.hasProperty("repoPassword") ? getProperty("repoPassword") : "" }
-// repoUrl can override the publication repo URL.
 
 BuildPlugin.configureRepositories(project)
 
@@ -66,35 +51,19 @@ if (VersionProperties.elasticsearch.toString().endsWith('-SNAPSHOT')) {
 } else {
   licenseCommit = "v${version}"
 }
+String elasticLicenseUrl = "https://raw.githubusercontent.com/elastic/elasticsearch/${licenseCommit}/licenses/ELASTIC-LICENSE.txt"
 
 subprojects {
   // Default to the apache license
   project.ext.licenseName = 'The Apache Software License, Version 2.0'
   project.ext.licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
 
+  // But stick the Elastic license url in project.ext so we can get it if we need to switch to it
+  project.ext.elasticLicenseUrl = elasticLicenseUrl
+
   // we only use maven publish to add tasks for pom generation
   plugins.withType(MavenPublishPlugin).whenPluginAdded {
     publishing {
-      repositories {
-        maven {
-          name = 'target'
-          credentials {
-            username = repoUsername
-            password = repoPassword
-          }
-          if (project.hasProperty("repoUrl")) {
-            url project.getProperty("repoUrl")
-          } else if(project.version.endsWith('-SNAPSHOT')) {
-            url "https://oss.sonatype.org/content/repositories/snapshots/"
-          } else {
-            url "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-          }
-        }
-        maven {
-          name = 'test'
-          url = "${rootProject.buildDir}/local-test-repo"
-        }
-      }
       publications {
         // add license information to generated poms
         all {
@@ -112,22 +81,19 @@ subprojects {
             developer.appendNode('url', 'https://www.strapdata.com')
           }
         }
-        maven(MavenPublication) {
-          if (components.hasProperty('java')) {
-            from components.java
-            artifacts {
-              archives sourcesJar
-              archives javadocJar
-            }
-          }
+      }
+      repositories {
+        maven {
+          name = 'test'
+          url = "${rootProject.buildDir}/local-test-repo"
         }
       }
     }
   }
 
   plugins.withType(BuildPlugin).whenPluginAdded {
-      project.licenseFile = project.rootProject.file('licenses/APACHE-LICENSE-2.0.txt')
-      project.noticeFile = project.rootProject.file('NOTICE.txt')
+    project.licenseFile = project.rootProject.file('licenses/APACHE-LICENSE-2.0.txt')
+    project.noticeFile = project.rootProject.file('NOTICE.txt')
   }
 }
 
@@ -140,14 +106,14 @@ subprojects {
 VersionCollection versions = new VersionCollection(file('server/src/main/java/org/elasticsearch/Version.java').readLines('UTF-8'))
 
 task updateCIBwcVersions() {
-    doLast {
-        File yml = file(".ci/bwcVersions")
-        yml.text = ""
-        yml << "BWC_VERSION:\n"
-        versions.indexCompatible.each {
-            yml << "  - \"$it\"\n"
-        }
+  doLast {
+    File yml = file(".ci/bwcVersions")
+    yml.text = ""
+    yml << "BWC_VERSION:\n"
+    versions.indexCompatible.each {
+      yml << "  - \"$it\"\n"
     }
+  }
 }
 
 // build metadata from previous build, contains eg hashes for bwc builds
@@ -182,10 +148,10 @@ task verifyVersions {
     if (gradle.startParameter.isOffline()) {
       throw new GradleException("Must run in online mode to verify versions")
     }
-    // Read the list from maven central. 
-    // Fetch the metadata an parse the xml into Version instances because it's more straight forward here 
+    // Read the list from maven central.
+    // Fetch the metadata an parse the xml into Version instances because it's more straight forward here
     // rather than bwcVersion ( VersionCollection ).
-    new URL('https://oss.sonatype.org/content/repositories/snapshots/com/strapdata/elasticsearch/elasticsearch/maven-metadata.xml').openStream().withStream { s ->
+    new URL('https://repo1.maven.org/maven2/org/elasticsearch/elasticsearch/maven-metadata.xml').openStream().withStream { s ->
       bwcVersions.compareToAuthoritative(
               new XmlParser().parse(s)
                       .versioning.versions.version
@@ -195,9 +161,9 @@ task verifyVersions {
     }
     String ciYml = file(".ci/bwcVersions").text
     bwcVersions.indexCompatible.each {
-        if (ciYml.contains("\"$it\"\n") == false) {
-            throw new Exception(".ci/bwcVersions is outdated, run `./gradlew updateCIBwcVersions` and check in the results");
-        }
+      if (ciYml.contains("\"$it\"\n") == false) {
+        throw new Exception(".ci/bwcVersions is outdated, run `./gradlew updateCIBwcVersions` and check in the results");
+      }
     }
   }
 }
@@ -264,25 +230,25 @@ allprojects {
     them as external dependencies so the build plugin that we use can be used
     to build elasticsearch plugins outside of the elasticsearch source tree. */
   ext.projectSubstitutions = [
-    "com.strapdata.elasticsearch.gradle:build-tools:${version}": ':build-tools',
-    "org.elasticsearch:rest-api-spec:${version}": ':rest-api-spec',
-    "com.strapdata.elasticsearch:elasticsearch:${version}": ':server',
-    "com.strapdata.elasticsearch:elasticsearch-cli:${version}": ':libs:cli',
-    "com.strapdata.elasticsearch:elasticsearch-core:${version}": ':libs:core',
-    "com.strapdata.elasticsearch:elasticsearch-x-content:${version}": ':libs:x-content',
-    "com.strapdata.elasticsearch:elasticsearch-secure-sm:${version}": ':libs:secure-sm',
-    "com.strapdata.elasticsearch:elasticsearch-ssl-config:${version}": ':libs:elasticsearch-ssl-config',
-    "com.strapdata.elasticsearch.client:elasticsearch-rest-client:${version}": ':client:rest',
-    "com.strapdata.elasticsearch.client:elasticsearch-rest-client-sniffer:${version}": ':client:sniffer',
-    "com.strapdata.elasticsearch.client:elasticsearch-rest-high-level-client:${version}": ':client:rest-high-level',
-    "com.strapdata.elasticsearch.client:test:${version}": ':client:test',
-    "com.strapdata.elasticsearch.client:transport:${version}": ':client:transport',
-    "com.strapdata.elasticsearch.plugin:elasticsearch-scripting-painless-spi:${version}": ':modules:lang-painless:spi',
-    "com.strapdata.elasticsearch.test:framework:${version}": ':test:framework',
-    "com.strapdata.elasticsearch.distribution.zip:elasticsearch:${version}": ':distribution:archives:zip',
-    "com.strapdata.elasticsearch.distribution.tar:elasticsearch:${version}": ':distribution:archives:tar',
-    "com.strapdata.elasticsearch.distribution.rpm:elasticsearch:${version}": ':distribution:packages:rpm',
-    "com.strapdata.elasticsearch.distribution.deb:elasticsearch:${version}": ':distribution:packages:deb',
+          "com.strapdata.elasticsearch.gradle:build-tools:${version}": ':build-tools',
+          "org.elasticsearch:rest-api-spec:${version}": ':rest-api-spec',
+          "com.strapdata.elasticsearch:elasticsearch:${version}": ':server',
+          "com.strapdata.elasticsearch:elasticsearch-cli:${version}": ':libs:cli',
+          "com.strapdata.elasticsearch:elasticsearch-core:${version}": ':libs:core',
+          "com.strapdata.elasticsearch:elasticsearch-x-content:${version}": ':libs:x-content',
+          "com.strapdata.elasticsearch:elasticsearch-secure-sm:${version}": ':libs:secure-sm',
+          "com.strapdata.elasticsearch:elasticsearch-ssl-config:${version}": ':libs:elasticsearch-ssl-config',
+          "com.strapdata.elasticsearch.client:elasticsearch-rest-client:${version}": ':client:rest',
+          "com.strapdata.elasticsearch.client:elasticsearch-rest-client-sniffer:${version}": ':client:sniffer',
+          "com.strapdata.elasticsearch.client:elasticsearch-rest-high-level-client:${version}": ':client:rest-high-level',
+          "com.strapdata.elasticsearch.client:test:${version}": ':client:test',
+          "com.strapdata.elasticsearch.client:transport:${version}": ':client:transport',
+          "com.strapdata.elasticsearch.plugin:elasticsearch-scripting-painless-spi:${version}": ':modules:lang-painless:spi',
+          "com.strapdata.elasticsearch.test:framework:${version}": ':test:framework',
+          "com.strapdata.elasticsearch.distribution.zip:elasticsearch:${version}": ':distribution:archives:zip',
+          "com.strapdata.elasticsearch.distribution.tar:elasticsearch:${version}": ':distribution:archives:tar',
+          "com.strapdata.elasticsearch.distribution.rpm:elasticsearch:${version}": ':distribution:packages:rpm',
+          "com.strapdata.elasticsearch.distribution.deb:elasticsearch:${version}": ':distribution:packages:deb',
           /*
     "com.strapdata.elasticsearch.distribution.integ-test-zip:elasticsearch:${version}": ':distribution:archives:integ-test-zip',
     "com.strapdata.elasticsearch.distribution.zip:elasticsearch-oss:${version}": ':distribution:archives:oss-zip',
@@ -290,19 +256,19 @@ allprojects {
     "com.strapdata.elasticsearch.distribution.rpm:elasticsearch-oss:${version}": ':distribution:packages:oss-rpm',
     "com.strapdata.elasticsearch.distribution.deb:elasticsearch-oss:${version}": ':distribution:packages:oss-deb',
            */
-    "com.strapdata.elasticsearch.test:logger-usage:${version}": ':test:logger-usage',
-    "com.strapdata.elasticsearch.xpack.test:feature-aware:${version}": ':x-pack:test:feature-aware',
-    // for transport client
-    "com.strapdata.elasticsearch.plugin:transport-netty4-client:${version}": ':modules:transport-netty4',
-    "com.strapdata.elasticsearch.plugin:reindex-client:${version}": ':modules:reindex',
-    "com.strapdata.elasticsearch.plugin:lang-mustache-client:${version}": ':modules:lang-mustache',
-    "com.strapdata.elasticsearch.plugin:parent-join-client:${version}": ':modules:parent-join',
-    "com.strapdata.elasticsearch.plugin:aggs-matrix-stats-client:${version}": ':modules:aggs-matrix-stats',
-    "com.strapdata.elasticsearch.plugin:percolator-client:${version}": ':modules:percolator',
-    "com.strapdata.elasticsearch.plugin:rank-eval-client:${version}": ':modules:rank-eval',
-    // for security example plugins
-    "com.strapdata.elasticsearch.plugin:x-pack-core:${version}": ':x-pack:plugin:core',
-    "com.strapdata.elasticsearch.client.x-pack-transport:${version}": ':x-pack:transport-client'
+          "com.strapdata.elasticsearch.test:logger-usage:${version}": ':test:logger-usage',
+          "com.strapdata.elasticsearch.xpack.test:feature-aware:${version}": ':x-pack:test:feature-aware',
+          // for transport client
+          "com.strapdata.elasticsearch.plugin:transport-netty4-client:${version}": ':modules:transport-netty4',
+          "com.strapdata.elasticsearch.plugin:reindex-client:${version}": ':modules:reindex',
+          "com.strapdata.elasticsearch.plugin:lang-mustache-client:${version}": ':modules:lang-mustache',
+          "com.strapdata.elasticsearch.plugin:parent-join-client:${version}": ':modules:parent-join',
+          "com.strapdata.elasticsearch.plugin:aggs-matrix-stats-client:${version}": ':modules:aggs-matrix-stats',
+          "com.strapdata.elasticsearch.plugin:percolator-client:${version}": ':modules:percolator',
+          "com.strapdata.elasticsearch.plugin:rank-eval-client:${version}": ':modules:rank-eval',
+          // for security example plugins
+          "com.strapdata.elasticsearch.plugin:x-pack-core:${version}": ':x-pack:plugin:core',
+          "com.strapdata.elasticsearch.client.x-pack-transport:${version}": ':x-pack:transport-client'
   ]
   // substitute unreleased versions with projects that check out and build locally
   /*
@@ -382,18 +348,18 @@ allprojects {
       }
       boolean hasShadow = project.plugins.hasPlugin(ShadowPlugin)
       project.configurations.compile.dependencies
-          .findAll()
-          .toSorted(sortClosure)
-          .each({ c -> depJavadocClosure(false, c) })
+              .findAll()
+              .toSorted(sortClosure)
+              .each({ c -> depJavadocClosure(false, c) })
       project.configurations.compileOnly.dependencies
-          .findAll()
-          .toSorted(sortClosure)
-          .each({ c -> depJavadocClosure(false, c) })
+              .findAll()
+              .toSorted(sortClosure)
+              .each({ c -> depJavadocClosure(false, c) })
       if (hasShadow) {
         project.configurations.bundle.dependencies
-            .findAll()
-            .toSorted(sortClosure)
-            .each({ c -> depJavadocClosure(true, c) })
+                .findAll()
+                .toSorted(sortClosure)
+                .each({ c -> depJavadocClosure(true, c) })
       }
     }
   }
@@ -491,7 +457,15 @@ allprojects {
   }
 
   File licenseHeaderFile
-  licenseHeaderFile = new File(project.rootDir, 'buildSrc/src/main/resources/license-headers/oss-license-header.txt')
+  String prefix = ':x-pack'
+  if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+    prefix = prefix.replace(':', '_')
+  }
+  if (eclipse.project.name.startsWith(prefix)) {
+    licenseHeaderFile = new File(project.rootDir, 'buildSrc/src/main/resources/license-headers/elastic-license-header.txt')
+  } else {
+    licenseHeaderFile = new File(project.rootDir, 'buildSrc/src/main/resources/license-headers/oss-license-header.txt')
+  }
 
   String lineSeparator = Os.isFamily(Os.FAMILY_WINDOWS) ? '\\\\r\\\\n' : '\\\\n'
   String licenseHeader = licenseHeaderFile.getText('UTF-8').replace(System.lineSeparator(), lineSeparator)
@@ -509,7 +483,7 @@ allprojects {
   // otherwise the eclipse merging is *super confusing*
   tasks.eclipse.dependsOn(cleanEclipse, copyEclipseSettings)
 
-  // work arround https://github.com/gradle/gradle/issues/6582 
+  // work arround https://github.com/gradle/gradle/issues/6582
   tasks.eclipseProject.mustRunAfter tasks.cleanEclipseProject
   tasks.matching { it.name == 'eclipseClasspath' }.all {
     it.mustRunAfter { tasks.cleanEclipseClasspath }
@@ -544,8 +518,8 @@ class Run extends DefaultTask {
   boolean debug = false
 
   @Option(
-        option = "debug-jvm",
-        description = "Enable debugging configuration, to allow attaching a debugger to elasticsearch."
+          option = "debug-jvm",
+          description = "Enable debugging configuration, to allow attaching a debugger to elasticsearch."
   )
   public void setDebug(boolean enabled) {
     project.project(':distribution').run.clusterConfig.debug = enabled
@@ -559,20 +533,20 @@ task run(type: Run) {
 }
 
 wrapper {
-    distributionType = 'ALL'
-    doLast {
-        final DistributionLocator locator = new DistributionLocator()
-        final GradleVersion version = GradleVersion.version(wrapper.gradleVersion)
-        final URI distributionUri = locator.getDistributionFor(version, wrapper.distributionType.name().toLowerCase(Locale.ENGLISH))
-        final URI sha256Uri = new URI(distributionUri.toString() + ".sha256")
-        final String sha256Sum = new String(sha256Uri.toURL().bytes)
-        wrapper.getPropertiesFile() << "distributionSha256Sum=${sha256Sum}\n"
-        println "Added checksum to wrapper properties"
-        // Update build-tools to reflect the Gradle upgrade
-        // TODO: we can remove this once we have tests to make sure older versions work.
-        project(':build-tools').file('src/main/resources/minimumGradleVersion').text = gradleVersion
-        println "Updated minimum Gradle Version"
-    }
+  distributionType = 'ALL'
+  doLast {
+    final DistributionLocator locator = new DistributionLocator()
+    final GradleVersion version = GradleVersion.version(wrapper.gradleVersion)
+    final URI distributionUri = locator.getDistributionFor(version, wrapper.distributionType.name().toLowerCase(Locale.ENGLISH))
+    final URI sha256Uri = new URI(distributionUri.toString() + ".sha256")
+    final String sha256Sum = new String(sha256Uri.toURL().bytes)
+    wrapper.getPropertiesFile() << "distributionSha256Sum=${sha256Sum}\n"
+    println "Added checksum to wrapper properties"
+    // Update build-tools to reflect the Gradle upgrade
+    // TODO: we can remove this once we have tests to make sure older versions work.
+    project(':build-tools').file('src/main/resources/minimumGradleVersion').text = gradleVersion
+    println "Updated minimum Gradle Version"
+  }
 }
 
 gradle.projectsEvaluated {
@@ -621,23 +595,23 @@ if (System.properties.get("build.compare") != null) {
 
 allprojects {
   task resolveAllDependencies {
-      dependsOn tasks.matching { it.name == "pullFixture"}
-      doLast {
-        configurations.findAll { it.isCanBeResolved() }.each { it.resolve() }
-      }
+    dependsOn tasks.matching { it.name == "pullFixture"}
+    doLast {
+      configurations.findAll { it.isCanBeResolved() }.each { it.resolve() }
+    }
   }
 }
 
 allprojects {
   task checkPart1
-  task checkPart2 
+  task checkPart2
   tasks.matching { it.name == "check" }.all { check ->
     if (check.path.startsWith(":x-pack:")) {
       checkPart2.dependsOn check
     } else {
       checkPart1.dependsOn check
     }
-  } 
+  }
 }
 
 gradle.projectsEvaluated {
