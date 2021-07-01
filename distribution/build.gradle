@@ -17,7 +17,6 @@
  * under the License.
  */
 
-import org.gradle.api.file.RelativePath
 import org.elasticsearch.gradle.ConcatFilesTask
 import org.elasticsearch.gradle.MavenFilteringHack
 import org.elasticsearch.gradle.NoticeTask
@@ -103,6 +102,10 @@ task buildOssConfig {
   dependsOn processOssOutputs
   outputs.dir "${ossOutputs}/conf"
 }
+task buildOssConfig2 {
+  dependsOn processOssOutputs
+  outputs.dir "${ossOutputs}/config"
+}
 task buildDefaultModules {
   dependsOn processDefaultOutputs
   outputs.dir "${defaultOutputs}/modules"
@@ -114,6 +117,10 @@ task buildDefaultBin {
 task buildDefaultConfig {
   dependsOn processDefaultOutputs
   outputs.dir "${defaultOutputs}/conf"
+}
+task buildDefaultConfig2 {
+  dependsOn processDefaultOutputs
+  outputs.dir "${defaultOutputs}/config"
 }
 task buildTransportModules {
   dependsOn processTransportOutputs
@@ -130,9 +137,9 @@ void copyModule(Sync copyTask, Project module) {
         String name = module.plugins.hasPlugin('elasticsearch.esplugin') ? module.esplugin.name : module.es_meta_plugin.name
         // Copy all non config/bin files
         // Note these might be unde a subdirectory in the case of a meta plugin
-        if ((details.relativePath.pathString ==~ /([^\/]+\/)?(conf|bin)\/.*/) == false) {
+        if ((details.relativePath.pathString ==~ /([^\/]+\/)?(config|conf|bin)\/.*/) == false) {
           details.relativePath = details.relativePath.prepend('modules', name)
-        } else if ((details.relativePath.pathString ==~ /([^\/]+\/)(conf|bin)\/.*/)) {
+        } else if ((details.relativePath.pathString ==~ /([^\/]+\/)(config|conf|bin)\/.*/)) {
           // this is the meta plugin case, in which we need to remove the intermediate dir
           String[] segments = details.relativePath.segments
           details.relativePath = new RelativePath(true, segments.takeRight(segments.length - 1))
@@ -324,7 +331,12 @@ configure(subprojects.findAll { ['archives', 'packages'].contains(it.name) }) {
             it.mode = 0644
           }
         }
-        from project(':distribution').buildOssModules
+        //these if else is responsible for copying modules !
+        if (oss) {
+          from project(':distribution').buildOssModules
+        } else {
+          from project(':distribution').buildDefaultModules
+        }
       }
     }
 
@@ -345,6 +357,21 @@ configure(subprojects.findAll { ['archives', 'packages'].contains(it.name) }) {
         } else {
           from project(':distribution').buildDefaultLog4jConfig
           from project(':distribution').buildDefaultConfig
+        }
+      }
+    }
+
+    configFiles2 = { distributionType, oss ->
+      copySpec {
+        with copySpec {
+          // main config files, processed with distribution specific substitutions
+          from '../src/config'
+          MavenFilteringHack.filter(it, expansionsForDistribution(distributionType, oss))
+        }
+        if (oss) {
+          from project(':distribution').buildOssConfig2
+        } else {
+          from project(':distribution').buildDefaultConfig2
         }
       }
     }
@@ -520,96 +547,96 @@ subprojects {
     licenseText = ' ' + licenseText.replace('\n', '\n ')
 
     String footer = "# Built for ${project.name}-${project.version} " +
-        "(${distributionType})"
+            "(${distributionType})"
     Map<String, Object> expansions = [
-      'project.name': project.name,
-      'project.version': version,
+            'project.name': project.name,
+            'project.version': version,
 
-      'path.conf': [
-        'deb': '/etc/cassandra',
-        'rpm': '/etc/cassandra',
-        'def': '"$ES_HOME"/conf'
-      ],
-      'path.data': [
-        'deb': packagingPathData,
-        'rpm': packagingPathData,
-        'def': '#path.data: /var/lib/cassandra/data'
-      ],
-      'path.env': [
-        'deb': '/etc/default/cassandra',
-        'rpm': '/etc/sysconfig/cassandra',
-        /* There isn't one of these files for tar or zip but its important to
-          make an empty string here so the script can properly skip it. */
-        'def': 'if [ -z "$ES_PATH_CONF" ]; then ES_PATH_CONF="$ES_HOME"/conf; done',
-      ],
-      'source.path.env': [
-         'deb': 'source /etc/default/cassandra',
-         'rpm': 'source /etc/sysconfig/cassandra',
-         'def': 'if [ -z "$ES_PATH_CONF" ]; then ES_PATH_CONF="$ES_HOME"/conf; fi',
-      ],
-      'path.logs': [
-        'deb': packagingPathLogs,
-        'rpm': packagingPathLogs,
-        'def': '#path.logs: /var/log/cassandra'
-      ],
-      'loggc': [
-        'deb': packagingLoggc,
-        'rpm': packagingLoggc,
-        'def': '/var/log/cassandra/gc.log'
-      ],
+            'path.conf': [
+                    'deb': '/etc/cassandra',
+                    'rpm': '/etc/cassandra',
+                    'def': '"$ES_HOME"/conf'
+            ],
+            'path.data': [
+                    'deb': packagingPathData,
+                    'rpm': packagingPathData,
+                    'def': '#path.data: /var/lib/cassandra/data'
+            ],
+            'path.env': [
+                    'deb': '/etc/default/cassandra',
+                    'rpm': '/etc/sysconfig/cassandra',
+                    /* There isn't one of these files for tar or zip but its important to
+                      make an empty string here so the script can properly skip it. */
+                    'def': 'if [ -z "$ES_PATH_CONF" ]; then ES_PATH_CONF="$ES_HOME"/conf; done',
+            ],
+            'source.path.env': [
+                    'deb': 'source /etc/default/cassandra',
+                    'rpm': 'source /etc/sysconfig/cassandra',
+                    'def': 'if [ -z "$ES_PATH_CONF" ]; then ES_PATH_CONF="$ES_HOME"/conf; fi',
+            ],
+            'path.logs': [
+                    'deb': packagingPathLogs,
+                    'rpm': packagingPathLogs,
+                    'def': '#path.logs: /var/log/cassandra'
+            ],
+            'loggc': [
+                    'deb': packagingLoggc,
+                    'rpm': packagingLoggc,
+                    'def': '/var/log/cassandra/gc.log'
+            ],
 
-      /* Elassandra hack in order to make elasticsearch-plugin works */
-      'path.plugin_eshome': [
-              'deb': '/usr/share/cassandra',
-              'rpm': '/usr/share/cassandra',
-              'def': '$(dirname $(dirname "$SCRIPT"))'
-      ],
+            /* Elassandra hack in order to make elasticsearch-plugin works */
+            'path.plugin_eshome': [
+                    'deb': '/usr/share/cassandra',
+                    'rpm': '/usr/share/cassandra',
+                    'def': '$(dirname $(dirname "$SCRIPT"))'
+            ],
 
-      'heap.min': defaultHeapSize,
-      'heap.max': defaultHeapSize,
+            'heap.min': defaultHeapSize,
+            'heap.max': defaultHeapSize,
 
-      'heap.dump.path': [
-        'deb': "-XX:HeapDumpPath=/var/log/cassandra",
-        'rpm': "-XX:HeapDumpPath=/var/log/cassandra",
-        'def': "-XX:HeapDumpPath=logs"
-      ],
+            'heap.dump.path': [
+                    'deb': "-XX:HeapDumpPath=/var/log/cassandra",
+                    'rpm': "-XX:HeapDumpPath=/var/log/cassandra",
+                    'def': "-XX:HeapDumpPath=logs"
+            ],
 
-      'error.file': [
-        'deb': "-XX:ErrorFile=/var/log/cassandra/hs_err_pid%p.log",
-        'rpm': "-XX:ErrorFile=/var/log/cassandra/hs_err_pid%p.log",
-        'def': "-XX:ErrorFile=logs/hs_err_pid%p.log"
-      ],
+            'error.file': [
+                    'deb': "-XX:ErrorFile=/var/log/cassandra/hs_err_pid%p.log",
+                    'rpm': "-XX:ErrorFile=/var/log/cassandra/hs_err_pid%p.log",
+                    'def': "-XX:ErrorFile=logs/hs_err_pid%p.log"
+            ],
 
-      'stopping.timeout': [
-        'rpm': 86400,
-      ],
+            'stopping.timeout': [
+                    'rpm': 86400,
+            ],
 
-      'scripts.footer': [
-        /* Debian needs exit 0 on these scripts so we add it here and preserve
-          the pretty footer. */
-        'deb': "exit 0\n${footer}",
-        'def': footer
-      ],
+            'scripts.footer': [
+                    /* Debian needs exit 0 on these scripts so we add it here and preserve
+                      the pretty footer. */
+                    'deb': "exit 0\n${footer}",
+                    'def': footer
+            ],
 
             'es.distribution.flavor': [
                     'def': oss ? 'oss' : 'default'
             ],
 
 
-      'es.distribution.type': [
-        'deb': 'deb',
-        'rpm': 'rpm',
-        'tar': 'tar',
-        'zip': 'zip'
-      ],
+            'es.distribution.type': [
+                    'deb': 'deb',
+                    'rpm': 'rpm',
+                    'tar': 'tar',
+                    'zip': 'zip'
+            ],
 
             'license.name': [
                     'deb': oss ? 'ASL-2.0' : 'Elastic-License'
             ],
 
-      'license.text': [
-        'deb': licenseText,
-      ],
+            'license.text': [
+                    'deb': licenseText,
+            ],
     ]
     Map<String, String> result = [:]
     expansions = expansions.each { key, value ->
